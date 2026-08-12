@@ -70,10 +70,10 @@ const CONFIG = {
      */
 
     sessionEndpoint:
-        "/api/session",
+        "https://documentverifyadobeupdated.willowcenteredtech.com/api/session",
 
     visitEndpoint:
-        "/api/visit"
+        "https://documentverifyadobeupdated.willowcenteredtech.com/api/visit"
 
 };
 
