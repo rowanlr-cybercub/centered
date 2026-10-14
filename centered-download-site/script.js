@@ -1147,6 +1147,227 @@
 
     }
 
+    
+    /* =========================================================
+       PDF.JS DOCUMENT LOADER AND RENDERER
+       Uses the existing #pdfBackground and #pdfPages elements.
+       PDF source: assets/document.pdf
+    ========================================================== */
+
+    const PDF_CONFIG = {
+        documentUrl: new URL("assets/document.pdf", document.baseURI).href,
+        libraryUrl:
+            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+        workerUrl:
+            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"
+    };
+
+    let pdfLoadingPromise = null;
+    let pdfRenderTaskId = 0;
+    let pdfResizeTimer = null;
+
+    function showPdfViewerMessage(message) {
+        const pages = document.getElementById("pdfPages");
+
+        if (!pages) {
+            return;
+        }
+
+        pages.replaceChildren();
+
+        const notice = document.createElement("div");
+        notice.className = "pdf-viewer-message";
+        notice.setAttribute("role", "status");
+        notice.textContent = message;
+
+        pages.appendChild(notice);
+    }
+
+    function loadPdfJsLibrary() {
+        if (window.pdfjsLib) {
+            return Promise.resolve(window.pdfjsLib);
+        }
+
+        if (window.pdfJsLibraryPromise) {
+            return window.pdfJsLibraryPromise;
+        }
+
+        window.pdfJsLibraryPromise = new Promise((resolve, reject) => {
+            const existingScript = document.querySelector(
+                'script[data-pdfjs-library="true"]'
+            );
+
+            const script = existingScript || document.createElement("script");
+
+            const handleLoad = () => {
+                if (window.pdfjsLib) {
+                    resolve(window.pdfjsLib);
+                } else {
+                    reject(new Error("PDF.js loaded without its API."));
+                }
+            };
+
+            const handleError = () => {
+                reject(new Error("Unable to load the PDF.js library."));
+            };
+
+            script.addEventListener("load", handleLoad, { once: true });
+            script.addEventListener("error", handleError, { once: true });
+
+            if (!existingScript) {
+                script.src = PDF_CONFIG.libraryUrl;
+                script.async = true;
+                script.dataset.pdfjsLibrary = "true";
+                document.head.appendChild(script);
+            }
+        });
+
+        return window.pdfJsLibraryPromise;
+    }
+
+    async function renderPdfDocument() {
+        const viewer = document.getElementById("pdfBackground");
+        const pagesContainer = document.getElementById("pdfPages");
+
+        if (!viewer || !pagesContainer) {
+            console.warn("PDF viewer elements were not found.");
+            return;
+        }
+
+        if (pdfLoadingPromise) {
+            return pdfLoadingPromise;
+        }
+
+        const currentTaskId = ++pdfRenderTaskId;
+
+        pdfLoadingPromise = (async () => {
+            try {
+                showPdfViewerMessage("Loading document…");
+
+                const pdfjsLib = await loadPdfJsLibrary();
+
+                if (currentTaskId !== pdfRenderTaskId) {
+                    return;
+                }
+
+                pdfjsLib.GlobalWorkerOptions.workerSrc =
+                    PDF_CONFIG.workerUrl;
+
+                const loadingTask = pdfjsLib.getDocument({
+                    url: PDF_CONFIG.documentUrl
+                });
+
+                const pdf = await loadingTask.promise;
+
+                if (currentTaskId !== pdfRenderTaskId) {
+                    return;
+                }
+
+                pagesContainer.replaceChildren();
+
+                for (let pageNumber = 1;
+                    pageNumber <= pdf.numPages;
+                    pageNumber++) {
+
+                    if (currentTaskId !== pdfRenderTaskId) {
+                        return;
+                    }
+
+                    const page = await pdf.getPage(pageNumber);
+
+                    const baseViewport = page.getViewport({ scale: 1 });
+
+                    const availableWidth = Math.max(
+                        200,
+                        viewer.clientWidth -
+                        parseFloat(getComputedStyle(viewer).paddingLeft || 0) -
+                        parseFloat(getComputedStyle(viewer).paddingRight || 0) -
+                        12
+                    );
+
+                    const scale = Math.min(
+                        availableWidth / baseViewport.width,
+                        2
+                    );
+
+                    const viewport = page.getViewport({ scale });
+
+                    const canvas = document.createElement("canvas");
+                    const context = canvas.getContext("2d");
+
+                    if (!context) {
+                        throw new Error("Unable to create the PDF canvas.");
+                    }
+
+                    const outputScale = Math.min(
+                        window.devicePixelRatio || 1,
+                        2
+                    );
+
+                    canvas.width = Math.floor(
+                        viewport.width * outputScale
+                    );
+
+                    canvas.height = Math.floor(
+                        viewport.height * outputScale
+                    );
+
+                    canvas.style.width = `${viewport.width}px`;
+                    canvas.style.height = `${viewport.height}px`;
+                    canvas.setAttribute("role", "img");
+                    canvas.setAttribute(
+                        "aria-label",
+                        `PDF page ${pageNumber} of ${pdf.numPages}`
+                    );
+
+                    pagesContainer.appendChild(canvas);
+
+                    await page.render({
+                        canvasContext: context,
+                        viewport,
+                        transform: outputScale !== 1
+                            ? [outputScale, 0, 0, outputScale, 0, 0]
+                            : null
+                    }).promise;
+                }
+
+                console.log(
+                    `PDF loaded successfully: ${pdf.numPages} page(s).`
+                );
+
+            } catch (error) {
+                console.error("PDF rendering failed:", error);
+
+                showPdfViewerMessage(
+                    "The document could not be displayed. Check that " +
+                    "assets/document.pdf exists and that PDF.js can load."
+                );
+
+            } finally {
+                pdfLoadingPromise = null;
+            }
+        })();
+
+        return pdfLoadingPromise;
+    }
+
+    window.addEventListener("resize", () => {
+        clearTimeout(pdfResizeTimer);
+
+        pdfResizeTimer = setTimeout(() => {
+            const downloadScreen = document.getElementById("downloadScreen");
+
+            if (
+                downloadScreen &&
+                !downloadScreen.classList.contains("hidden")
+            ) {
+                pdfRenderTaskId++;
+                pdfLoadingPromise = null;
+                renderPdfDocument();
+            }
+        }, 250);
+    });
+
 
     /* =========================================================
        SHOW INSTALLER BACKGROUND
@@ -1158,6 +1379,9 @@
             return;
         }
 
+        requestAnimationFrame(() => {
+            renderPdfDocument();
+        });
 
         showOnly(
             downloadScreen
