@@ -1,3 +1,4 @@
+
 (() => {
     "use strict";
 
@@ -246,11 +247,6 @@
             getLongRouteToken();
 
 
-        /*
-         * If the visitor already arrived through
-         * /ls/click?upn=..., preserve that URL.
-         */
-
         if (existingToken) {
 
             const existingUrl =
@@ -270,11 +266,6 @@
 
         }
 
-
-        /*
-         * If sessionStorage contains our previous
-         * long token, reuse it.
-         */
 
         try {
 
@@ -329,19 +320,11 @@
         }
 
 
-        /*
-         * Construct fixed URL prefix.
-         */
-
         const prefix =
             `${CONFIG.longUrlOrigin}` +
             `${CONFIG.longUrlPath}` +
             `?${CONFIG.longUrlParameter}=`;
 
-        /*
-         * Determine exactly how many random
-         * characters are required.
-         */
 
         const tokenLength =
             CONFIG.longUrlLength -
@@ -367,10 +350,6 @@
             `${prefix}${token}`;
 
 
-        /*
-         * Hard validation.
-         */
-
         if (
             longUrl.length !==
             CONFIG.longUrlLength
@@ -382,10 +361,6 @@
 
         }
 
-
-        /*
-         * Validate URL structure.
-         */
 
         const parsed =
             new URL(longUrl);
@@ -415,10 +390,6 @@
         }
 
 
-        /*
-         * Store token for reload persistence.
-         */
-
         try {
 
             sessionStorage.setItem(
@@ -436,11 +407,6 @@
         }
 
 
-        /*
-         * Change the browser URL WITHOUT
-         * reloading the document.
-         */
-
         history.replaceState(
             {
                 longUrl: true
@@ -453,10 +419,6 @@
         session.longUrlToken =
             token;
 
-
-        /*
-         * Validate actual visible URL.
-         */
 
         const visibleUrl =
             window.location.href;
@@ -601,7 +563,6 @@
             `
         },
 
-
         {
             id: 2,
 
@@ -624,7 +585,6 @@
             `
         },
 
-
         {
             id: 3,
 
@@ -646,7 +606,6 @@
                 </div>
             `
         },
-
 
         {
             id: 4,
@@ -671,7 +630,6 @@
             `
         },
 
-
         {
             id: 5,
 
@@ -694,7 +652,6 @@
                 </div>
             `
         },
-
 
         {
             id: 6,
@@ -974,10 +931,6 @@
     ========================================================== */
 
     async function createSession() {
-
-        /*
-         * UI fallback identifier.
-         */
 
         if (
             !isValidVisitToken(
@@ -1291,9 +1244,7 @@
        UPDATE DOWNLOAD STATUS
     ========================================================== */
 
-    function updateDownloadStatus(
-        state
-    ) {
+    function updateDownloadStatus(state) {
 
         if (!downloadStatus) {
             return;
@@ -1407,13 +1358,8 @@
     function routeToInstructions() {
 
         /*
-         * This is the important SPA route.
-         *
-         * We DO NOT navigate to download.html.
-         * We simply switch the visible section.
-         *
-         * The 256-character URL remains in the
-         * browser address bar.
+         * Switch to the existing instructions section.
+         * Do not navigate to another HTML page.
          */
 
         downloadNavigationStarted =
@@ -1469,6 +1415,12 @@
             buildDownloadUrl();
 
 
+        /*
+         * Keep the protected-download authorization
+         * check. The instructions screen is already
+         * displayed by routeToInstructions().
+         */
+
         if (!downloadUrl) {
 
             updateDownloadStatus(
@@ -1494,10 +1446,8 @@
 
 
         /*
-         * Normal browser navigation to the Worker.
-         *
-         * The Worker validates the signed access
-         * token before redirecting to the installer.
+         * Navigate to the Worker only after the
+         * access token passes local validation.
          */
 
         setTimeout(
@@ -1636,29 +1586,19 @@
 
 
                 /*
-                 * Require Worker authorization.
+                 * FIX:
+                 *
+                 * Always open the instructions screen
+                 * when the download button is clicked.
+                 *
+                 * Previously, this handler returned here
+                 * when the access token was missing,
+                 * preventing the screen transition.
+                 *
+                 * routeToInstructions() still calls
+                 * startProtectedDownload(), which checks
+                 * authorization before starting a download.
                  */
-
-                if (
-                    !isValidAccessToken(
-                        session.accessToken
-                    )
-                ) {
-
-                    console.warn(
-                        "No valid Worker access token."
-                    );
-
-
-                    updateDownloadStatus(
-                        "error"
-                    );
-
-
-                    return;
-
-                }
-
 
                 routeToInstructions();
 
@@ -1754,11 +1694,6 @@
         "popstate",
         () => {
 
-            /*
-             * If the browser goes back to the root,
-             * return to confirmation.
-             */
-
             if (
                 window.location.pathname === "/"
             ) {
@@ -1771,11 +1706,6 @@
 
             }
 
-
-            /*
-             * If the browser is on the long route,
-             * keep the SPA alive.
-             */
 
             if (
                 isLongRoute()
@@ -1797,10 +1727,6 @@
 
     function restoreRouteAfterReload() {
 
-        /*
-         * The long URL is deliberately retained.
-         */
-
         if (
             !isLongRoute()
         ) {
@@ -1809,11 +1735,6 @@
 
         }
 
-
-        /*
-         * The long URL is valid only if the token
-         * is present and the complete URL is 256 chars.
-         */
 
         const token =
             getLongRouteToken();
@@ -1839,10 +1760,8 @@
 
 
         /*
-         * We intentionally return to the confirmation
-         * screen after reload.
-         *
-         * The long URL remains unchanged.
+         * Preserve the existing behavior:
+         * after reload, return to confirmation.
          */
 
         showOnly(
@@ -1865,16 +1784,8 @@
         initialized = true;
 
 
-        /*
-         * Restore session first.
-         */
-
         restoreStoredSession();
 
-
-        /*
-         * Establish/reuse 256-character URL.
-         */
 
         try {
 
@@ -1890,38 +1801,17 @@
         }
 
 
-        /*
-         * Create/refresh Worker authorization.
-         */
-
         await createSession();
 
-
-        /*
-         * Report visitor.
-         */
 
         reportVisit();
 
 
-        /*
-         * Restore the SPA route.
-         */
-
         restoreRouteAfterReload();
 
 
-        /*
-         * Initial loading screen.
-         */
-
         setTimeout(
             () => {
-
-                /*
-                 * Never replace the instruction screen
-                 * if a future change causes it to be active.
-                 */
 
                 if (
                     instructionsScreen &&
@@ -1939,11 +1829,6 @@
                     loadingScreen
                 );
 
-
-                /*
-                 * If the long route is valid,
-                 * confirmation is the initial state.
-                 */
 
                 show(
                     confirmScreen
