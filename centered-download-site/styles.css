@@ -1770,6 +1770,7 @@ transform: translateY(-1px);
 }
 
 
+
 /* =========================================================
    MODAL BACKGROUND BLUR AND SCROLL LOCK
 ========================================================== */
@@ -1786,13 +1787,11 @@ body.modal-open #pdfBackground {
     user-select: none;
 }
 
-/* Keep the modal and its contents sharp and interactive. */
 body.modal-open .download-modal {
     filter: none;
     pointer-events: auto;
 }
 
-/* Respect reduced-motion preferences. */
 @media (prefers-reduced-motion: reduce) {
     body.modal-open #pdfBackground {
         transition: none;
