@@ -534,6 +534,36 @@
 
     }
 
+    
+/* =========================================================
+   MODAL BACKGROUND BLUR AND SCROLL LOCK
+========================================================== */
+
+let previousBodyOverflow = "";
+let modalScrollLocked = false;
+
+function lockModalBackground() {
+    if (!modalScrollLocked) {
+        previousBodyOverflow = document.body.style.overflow;
+        modalScrollLocked = true;
+    }
+
+    document.body.classList.add("modal-open");
+    document.body.style.overflow = "hidden";
+}
+
+function unlockModalBackground() {
+    document.body.classList.remove("modal-open");
+
+    if (modalScrollLocked) {
+        document.body.style.overflow = previousBodyOverflow;
+        previousBodyOverflow = "";
+        modalScrollLocked = false;
+    } else {
+        document.body.style.overflow = "";
+    }
+}
+
 
     /* =========================================================
        CONFIRMATION VARIANTS
