@@ -1768,3 +1768,33 @@ transform: translateY(-1px);
         scale(1.18);
 
 }
+
+
+/* =========================================================
+   MODAL BACKGROUND BLUR AND SCROLL LOCK
+========================================================== */
+
+body.modal-open {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+}
+
+body.modal-open #pdfBackground {
+    filter: blur(6px);
+    transition: filter 250ms ease;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Keep the modal and its contents sharp and interactive. */
+body.modal-open .download-modal {
+    filter: none;
+    pointer-events: auto;
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+    body.modal-open #pdfBackground {
+        transition: none;
+    }
+}
